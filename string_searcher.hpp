@@ -146,6 +146,7 @@ namespace ys
 			{
 				assert(buffer);
 				assert(0 < length);
+				assert(this->next_ < ~(STYPE)0);
 
 				STYPE n = (STYPE)this->pattern_.length();
 				STYPE d = this->next_ < n - 1 ? n - 1 : this->next_;
@@ -223,6 +224,7 @@ namespace ys
 			{
 				assert(buffer);
 				assert(0 < length);
+				assert(this->next_ < ~(STYPE)0);
 
 				STYPE n = (STYPE)this->pattern_.length();
 				STYPE i(this->next_);
@@ -300,6 +302,7 @@ namespace ys
 			{
 				assert(buffer);
 				assert(0 < length);
+				assert(this->next_ < ~(STYPE)0);
 
 				STYPE n = (STYPE)this->pattern_.length();
 				STYPE i(this->next_);
