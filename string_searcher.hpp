@@ -271,12 +271,6 @@ namespace ys
 			}
 
 		/**
-		 * デストラクタ
-		 */
-		virtual
-		~SundaySearcher() = default;
-
-		/**
 		 * コピー・コンストラクタ (使用禁止)
 		 */
 		SundaySearcher(const SundaySearcher<CTYPE, STYPE>&) = delete;
@@ -286,6 +280,12 @@ namespace ys
 		 */
 		SundaySearcher&
 		operator =(const SundaySearcher<CTYPE, STYPE>&) = delete;
+
+		/**
+		 * デストラクタ
+		 */
+		virtual
+		~SundaySearcher() = default;
 
 		/**
 		 * 探索
