@@ -32,9 +32,25 @@ namespace ys
 		std::basic_string<CTYPE> pattern_;
 
 		/// 文字列の次の探索開始位置
-		STYPE next_;
+		size_t next_;
+
+#ifndef	_NDEBUG
+		/// 文字列比較処理の実施回数
+		size_t count_;
+#endif	// !_NDEBUG
 
 	public:
+
+		/**
+		 * コンストラクタ
+		 */
+		StringSearcher()
+#ifndef	_NDEBUG
+			: count_(0)
+#endif	// !_NDEBUG
+			{
+				;
+			}
 
 		/**
 		 * コンストラクタ
@@ -42,6 +58,9 @@ namespace ys
 		 */
 		StringSearcher(const CTYPE* pattern)
 			: pattern_(pattern), next_(0)
+#ifndef	_NDEBUG
+			, count_(0)
+#endif	// !_NDEBUG
 			{
 				assert(pattern);
 				assert(0 < pattern_.length());
@@ -65,17 +84,11 @@ namespace ys
 		~StringSearcher() = default;
 
 		/**
-		 * 探索
-		 * @param[in]	buffer	探索対象文字列
-		 * @param[in]	length	文字列 @a buffer の長さ
-		 * @return	文字列 @a buffer 内のパターン文字列の位置
-		 * @note	探索失敗時には @a STYPE の最大値が返却される。
-		 * @note	本メソッドを連続で呼び出すことで、
-					@a buffer 内の全パターン文字列が抽出できる。
+		 * パターンを設定
+		 * @param[in]	pattern	パターン文字列
 		 */
-		virtual STYPE
-		search(const CTYPE* buffer,
-			   STYPE length) = 0;
+		virtual void
+		prepare(const CTYPE* pattern) = 0;
 
 		/**
 		 * 探索の状態を初期化
@@ -86,6 +99,29 @@ namespace ys
 		rewind()
 			{
 				next_ = 0;
+			}
+
+		/**
+		 * 探索
+		 * @param[in]	buffer	探索対象文字列
+		 * @param[in]	length	文字列 @a buffer の長さ
+		 * @return	文字列 @a buffer 内のパターン文字列の位置
+		 * @note	探索失敗時には @a STYPE の最大値が返却される。
+		 * @note	本メソッドを連続で呼び出すことで、
+					@a buffer 内の全パターン文字列が抽出できる。
+		 */
+		virtual size_t
+		search(const CTYPE* buffer,
+			   size_t length) = 0;
+
+		/**
+		 * 文字列比較の実施回数を取得
+		 * @return	文字列比較の実施回数
+		 */
+		virtual size_t
+		get_count() const
+			{
+				return count_;
 			}
 	};
 
@@ -100,15 +136,20 @@ namespace ys
 
 		/**
 		 * コンストラクタ
+		 */
+		BoyerMooreSearcher() = default;
+
+		/**
+		 * コンストラクタ
 		 * @param[in]	pattern	パターン文字列
 		 */
 		BoyerMooreSearcher(const CTYPE* pattern)
 			: BoyerMooreSearcher::StringSearcher(pattern)
 			{
-				STYPE n = (STYPE)this->pattern_.length();
+				size_t n = this->pattern_.length();
 
-				for (STYPE i(0); i + 1 < n; ++i) {
-					this->table_[pattern[i]] = n - i - 1;
+				for (size_t i(0); i + 1 < n; ++i) {
+					this->table_[pattern[i]] = (STYPE)(n - i - 1);
 				}
 
 				this->table_.rehash(this->table_.size());
@@ -132,6 +173,28 @@ namespace ys
 		operator =(const BoyerMooreSearcher<CTYPE, STYPE>&) = delete;
 
 		/**
+		 * パターンを設定
+		 * @param[in]	pattern	パターン文字列
+		 */
+		virtual void
+		prepare(const CTYPE* pattern)
+			{
+				assert(pattern);
+				assert(0 < std::strlen(pattern));
+
+				this->pattern_ = pattern;
+				this->next_ = 0;
+
+				size_t n = this->pattern_.length();
+
+				for (size_t i(0); i + 1 < n; ++i) {
+					this->table_[pattern[i]] = (STYPE)(n - i - 1);
+				}
+
+				this->table_.rehash(this->table_.size());
+			}
+
+		/**
 		 * 探索
 		 * @param[in]	buffer	探索対象文字列
 		 * @param[in]	length	文字列 @a buffer の長さ
@@ -140,25 +203,28 @@ namespace ys
 		 * @note	本メソッドを連続で呼び出すことで、
 					@a buffer 内の全パターン文字列が抽出できる。
 		 */
-		virtual STYPE
+		virtual size_t
 		search(const CTYPE* buffer,
-			   STYPE length)
+			   size_t length)
 			{
 				assert(buffer);
 				assert(0 < length);
-				assert(this->next_ < ~(STYPE)0);
+				assert(this->next_ < ~(size_t)0);
 
-				STYPE n = (STYPE)this->pattern_.length();
-				STYPE d = this->next_ < n - 1 ? n - 1 : this->next_;
+				size_t n = this->pattern_.length();
+				size_t d = this->next_ < n - 1 ? n - 1 : this->next_;
 
-				for (STYPE i(d); i < length; ++i) {
+				for (size_t i(d); i < length; ++i) {
 					bool f(false);
-					for (STYPE j(0); j < n; ++j) {
+#ifndef	_NDEBUG
+					this->count_++;
+#endif	// !_NDEBUG
+					for (size_t j(0); j < n; ++j) {
 						if (buffer[i-j] == this->pattern_[n-j-1]) continue;
 						f = true;
-						STYPE k = n;
+						size_t k = n;
 						if (this->table_.find(buffer[i-j]) != this->table_.end()) {
-							k = this->table_[buffer[i-j]];
+							k = (size_t)this->table_[buffer[i-j]];
 						}
 						if (j < k) i += k - j - 1;	// スキップ
 						break;
@@ -169,7 +235,7 @@ namespace ys
 					return i - (n - 1);
 				}
 
-				return this->next_ = ~(STYPE)0;
+				return this->next_ = ~(size_t)0;
 			}
 	};
 
@@ -181,6 +247,11 @@ namespace ys
 		: public BoyerMooreSearcher<CTYPE, STYPE>
 	{
 	public:
+
+		/**
+		 * コンストラクタ
+		 */
+		HorspoolSearcher() = default;
 
 		/**
 		 * コンストラクタ
@@ -218,30 +289,33 @@ namespace ys
 		 * @note	本メソッドを連続で呼び出すことで、
 					@a buffer 内の全パターン文字列が抽出できる。
 		 */
-		virtual STYPE
+		virtual size_t
 		search(const CTYPE* buffer,
-			   STYPE length)
+			   size_t length)
 			{
 				assert(buffer);
 				assert(0 < length);
-				assert(this->next_ < ~(STYPE)0);
+				assert(this->next_ < ~(size_t)0);
 
-				STYPE n = (STYPE)this->pattern_.length();
-				STYPE i(this->next_);
+				size_t n = this->pattern_.length();
+				size_t i(this->next_);
 
 				while (i + n - 1 < length) {
+#ifndef	_NDEBUG
+					this->count_++;
+#endif	// !_NDEBUG
 					if (std::memcmp(buffer + i, this->pattern_.c_str(), sizeof(CTYPE) * n) == 0) {
 						this->next_ = i + 1;
 						return i;
 					}
-					STYPE k = n;
+					size_t k = n;
 					if (this->table_.find(buffer[i+n-1]) != this->table_.end()) {
-						k = this->table_[buffer[i+n-1]];
+						k = (size_t)this->table_[buffer[i+n-1]];
 					}
 					i += k;	// スキップ
 				}
 
-				return this->next_ = ~(STYPE)0;
+				return this->next_ = ~(size_t)0;
 			}
 	};
 
@@ -256,15 +330,20 @@ namespace ys
 
 		/**
 		 * コンストラクタ
+		 */
+		SundaySearcher() = default;
+
+		/**
+		 * コンストラクタ
 		 * @param[in]	pattern	パターン文字列
 		 */
 		SundaySearcher(const CTYPE* pattern)
 			: SundaySearcher::StringSearcher(pattern)
 			{
-				STYPE n = (STYPE)this->pattern_.length();
+				size_t n = this->pattern_.length();
 
-				for (STYPE i(0); i < n; ++i) {
-					this->table_[pattern[i]] = n - i - 1;
+				for (size_t i(0); i < n; ++i) {
+					this->table_[pattern[i]] = (STYPE)(n - i - 1);
 				}
 
 				this->table_.rehash(this->table_.size());
@@ -288,6 +367,28 @@ namespace ys
 		~SundaySearcher() = default;
 
 		/**
+		 * パターンを設定
+		 * @param[in]	pattern	パターン文字列
+		 */
+		virtual void
+		prepare(const CTYPE* pattern)
+			{
+				assert(pattern);
+				assert(0 < std::strlen(pattern));
+
+				this->pattern_ = pattern;
+				this->next_ = 0;
+
+				size_t n = this->pattern_.length();
+
+				for (size_t i(0); i < n; ++i) {
+					this->table_[pattern[i]] = (STYPE)(n - i - 1);
+				}
+
+				this->table_.rehash(this->table_.size());
+			}
+
+		/**
 		 * 探索
 		 * @param[in]	buffer	探索対象文字列
 		 * @param[in]	length	文字列 @a buffer の長さ
@@ -296,30 +397,33 @@ namespace ys
 		 * @note	本メソッドを連続で呼び出すことで、
 					@a buffer 内の全パターン文字列が抽出できる。
 		 */
-		virtual STYPE
+		virtual size_t
 		search(const CTYPE* buffer,
-			   STYPE length)
+			   size_t length)
 			{
 				assert(buffer);
 				assert(0 < length);
-				assert(this->next_ < ~(STYPE)0);
+				assert(this->next_ < ~(size_t)0);
 
-				STYPE n = (STYPE)this->pattern_.length();
-				STYPE i(this->next_);
+				size_t n = this->pattern_.length();
+				size_t i(this->next_);
 
 				while (i + n - 1 < length) {
+#ifndef	_NDEBUG
+					this->count_++;
+#endif	// !_NDEBUG
 					if (std::memcmp(buffer + i, this->pattern_.c_str(), sizeof(CTYPE) * n) == 0) {
 						this->next_ = i + 1;
 						return i;
 					}
-					STYPE k = n;
+					size_t k = n;
 					if (this->table_.find(buffer[i+n]) != this->table_.end()) {
-						k = this->table_[buffer[i+n]];
+						k = (size_t)this->table_[buffer[i+n]];
 					}
 					i += k + 1;	// スキップ
 				}
 
-				return this->next_ = ~(STYPE)0;
+				return this->next_ = ~(size_t)0;
 			}
 	};
 };

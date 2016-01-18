@@ -10,6 +10,8 @@
 #include <algorithm>
 #include "string_searcher.hpp"
 
+#define	N	3
+
 int main()
 {
 	const char input[] = "あらゆるげんじつをすべてじぶんのほうへねじまげたのだ。";
@@ -17,15 +19,15 @@ int main()
 	size_t l = std::strlen(input);
 	size_t m = std::strlen(pattern);
 
-	ys::StringSearcher<char, size_t>* searchers[3];
+	ys::StringSearcher<char, unsigned int>* searchers[N];
 
-	searchers[0] = new ys::BoyerMooreSearcher<char, size_t>(pattern);
-	searchers[1] = new ys::HorspoolSearcher<char, size_t>(pattern);
-	searchers[2] = new ys::SundaySearcher<char, size_t>(pattern);
+	searchers[0] = new ys::BoyerMooreSearcher<char, unsigned int>(pattern);
+	searchers[1] = new ys::HorspoolSearcher<char, unsigned int>(pattern);
+	searchers[2] = new ys::SundaySearcher<char, unsigned int>(pattern);
 
 	std::printf("[-] %s\n", input);
 
-	for (size_t h(0); h < 3; ++h) {
+	for (size_t h(0); h < N; ++h) {
 		size_t i(0);
 
 		while (i < l) {
@@ -33,11 +35,11 @@ int main()
 			if (i == ~(size_t)0) break;
 			std::printf("[%lu] _", h);
 			for (size_t j(0); j < m; ++j) std::printf("%c", input[i+j]);
-			std::printf("_%s\n", input + i + m);
+			std::printf("_%s (%lu)\n", input + i + m, searchers[h]->get_count());
 		}
 	}
 
-	std::for_each(searchers, searchers + 3, [](ys::StringSearcher<char, size_t>* p) { delete p; });
+	std::for_each(searchers, searchers + N, [](ys::StringSearcher<char, unsigned int>* p) { delete p; });
 
 	return 0;
 }
