@@ -114,6 +114,7 @@ namespace ys
 		search(const CTYPE* buffer,
 			   size_t length) = 0;
 
+#ifndef	_NDEBUG
 		/**
 		 * 文字列比較の実施回数を取得
 		 * @return	文字列比較の実施回数
@@ -123,6 +124,7 @@ namespace ys
 			{
 				return count_;
 			}
+#endif	// !_NDEBUG
 	};
 
 	/**
