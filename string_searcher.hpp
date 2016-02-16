@@ -11,8 +11,8 @@
 
 #include <cstring>
 #include <cassert>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 namespace ys
 {
@@ -58,6 +58,7 @@ namespace ys
 					delete [] pattern_;
 					pattern_ = 0;
 					length_ = 0;
+					table_.clear();
 				}
 
 				pattern_ = new CTYPE[length];
@@ -87,8 +88,9 @@ namespace ys
 		 */
 		StringSearcher(const CTYPE* pattern,
 					   size_t length)
+			: pattern_(0)
 #ifndef	_NDEBUG
-			: count_(0)
+			, count_(0)
 #endif	// !_NDEBUG
 			{
 				assert(pattern);
@@ -102,8 +104,9 @@ namespace ys
 		 * @param[in]	pattern	パターン文字列
 		 */
 		StringSearcher(const std::basic_string<CTYPE>& pattern)
+			: pattern_(0)
 #ifndef	_NDEBUG
-			: count_(0)
+			, count_(0)
 #endif	// !_NDEBUG
 			{
 				assert(0 < pattern.length());
@@ -482,8 +485,6 @@ namespace ys
 				assert(pattern);
 				assert(0 < length);
 
-				this->copy_pattern(pattern, length);
-
 				for (size_t i(0); i < length; ++i) {
 					this->table_[pattern[i]] = (STYPE)(length - i - 1);
 				}
@@ -499,8 +500,6 @@ namespace ys
 			: SundaySearcher::StringSearcher(pattern)
 			{
 				assert(0 < pattern.length());
-
-				this->copy_pattern(pattern.c_str(), pattern.length());
 
 				for (size_t i(0); i < this->length_; ++i) {
 					this->table_[pattern[i]] = (STYPE)(this->length_ - i - 1);
@@ -587,6 +586,7 @@ namespace ys
 						this->next_ = i + 1;
 						return i;
 					}
+					if (i + n == length) break;
 					size_t k = n;
 					if (this->table_.find(buffer[i+n]) != this->table_.end()) {
 						k = (size_t)this->table_[buffer[i+n]];
